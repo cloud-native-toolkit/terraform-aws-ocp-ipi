@@ -1,0 +1,61 @@
+locals {
+  pull_secret = var.pull_secret_file != "" ? "${chomp(file(var.pull_secret_file))}" : var.pull_secret
+  install_path = "${path.cwd}/${var.install_offset}"
+  cluster_type = "openshift"
+  cluster_type_code = "ocp4"
+  resource_group = var.cluster_name
+}
+
+resource "local_file" "aws_config" {
+    content = templatefile("${path.module}/templates/credentials.tftpl",{
+        ACCESS_KEY      = var.access_key
+        ACCESS_SECRET   = var.secret_key
+    })
+    filename        = pathexpand("~/.aws/credentials")
+    file_permission = "0600"
+}
+
+module setup_clis {
+    source = "github.com/cloud-native-toolkit/terraform-util-clis.git"
+
+    bin_dir = "${path.cwd}/${var.binary_offset}"
+    clis    = ["openshift-install-${var.openshift_version}","jq","yq4","oc"]
+}
+
+resource "local_file" "install_config" {
+    content = templatefile("${path.module}/templates/install-config.yaml.tftpl", {
+        BASE_DOMAIN             = var.base_domain_name
+        MASTER_HYPERTHREADING   = var.master_hyperthreading
+        MASTER_ARCHITECTURE     = var.master_architecture
+        MASTER_NODE_TYPE        = var.master_node_type
+        MASTER_NODE_QTY         = var.master_node_qty
+        WORKER_HYPERTHREADING   = var.worker_hyperthreading
+        WORKER_ARCHITECTURE     = var.worker_architecture
+        WORKER_NODE_TYPE        = var.worker_node_type
+        WORKER_VOLUME_IOPS      = var.worker_volume_iops
+        WORKER_VOLUME_SIZE      = var.worker_volume_size
+        WORKER_VOLUME_TYPE      = var.worker_volume_type
+        WORKER_NODE_QTY         = var.worker_node_qty
+        CLUSTER_NAME            = var.cluster_name
+        CLUSTER_CIDR            = var.cluster_cidr
+        CLUSTER_HOST_PREFIX     = var.cluster_host_prefix
+        MACHINE_CIDR            = var.existing_vpc ? var.vpc_cidr : var.machine_cidr
+        NETWORK_TYPE            = var.network_type
+        SERVICE_NETWORK_CIDR    = var.service_network_cidr
+        AWS_REGION              = var.region
+        RESOURCE_GROUP          = local.resource_group
+        EXISTING_VPC            = var.existing_vpc
+        PRIVATE_SUBNET1         = var.existing_vpc ? var.private_subnet1 : ""
+        PRIVATE_SUBNET2         = var.existing_vpc ? var.private_subnet2 : ""
+        PRIVATE_SUBNET3         = var.existing_vpc ? var.private_subnet3 : ""
+        PUBLIC_SUBNET1          = var.existing_vpc && !var.private ? var.public_subnet1 : ""
+        PUBLIC_SUBNET2          = var.existing_vpc && !var.private ? var.public_subnet2 : ""
+        PUBLIC_SUBNET3          = var.existing_vpc && !var.private ? var.public_subnet3 : ""
+        PULL_SECRET             = local.pull_secret
+        PUBLISH                 = var.private ? "Internal" : "External"
+        ENABLE_FIPS             = var.enable_fips
+        PUBLIC_SSH_KEY          = var.public_ssh_key
+    })
+    filename        = "${local.install_path}/install-config.yaml"
+    file_permission = "0664"
+}
