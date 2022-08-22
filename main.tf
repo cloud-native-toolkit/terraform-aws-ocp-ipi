@@ -1,8 +1,12 @@
 locals {
   pull_secret = var.pull_secret_file != "" ? "${chomp(file(var.pull_secret_file))}" : var.pull_secret
+
   install_path = "${path.cwd}/${var.install_offset}"
+  binary_path = "${path.cwd}/${var.binary_offset}"
+
   cluster_type = "openshift"
   cluster_type_code = "ocp4"
+
   resource_group = var.cluster_name
 }
 
@@ -18,7 +22,7 @@ resource "local_file" "aws_config" {
 module setup_clis {
     source = "github.com/cloud-native-toolkit/terraform-util-clis.git"
 
-    bin_dir = "${path.cwd}/${var.binary_offset}"
+    bin_dir = local.binary_path
     clis    = ["openshift-install-${var.openshift_version}","jq","yq4","oc"]
 }
 
@@ -58,4 +62,55 @@ resource "local_file" "install_config" {
     })
     filename        = "${local.install_path}/install-config.yaml"
     file_permission = "0664"
+}
+
+resource "null_resource" "openshift-install" {
+  depends_on = [
+        local_file.aws_config,
+        local_file.install_config,
+        module.setup_clis
+  ]
+
+  triggers = {
+        binary_path = local.binary_path
+        install_path = local.install_path
+  }
+
+  provisioner "local-exec" {
+    when = create
+
+    command = "${path.module}/scripts/install.sh"
+
+    environment = {
+        BINARY_PATH = "${self.triggers.binary_path}"
+        INSTALL_PATH = "${self.triggers.install_path}"
+     }
+  }
+
+  provisioner "local-exec" {
+    when = destroy
+
+    command = "${path.module}/scripts/destroy.sh"
+    
+    environment = {
+        BINARY_PATH = "${self.triggers.binary_path}"
+        INSTALL_PATH = "${self.triggers.install_path}"
+     }
+  }
+}
+
+data external "cluster_info" {
+    depends_on = [
+        null_resource.openshift-install,
+        module.setup_clis
+    ]
+
+    program = ["bash", "${path.module}/scripts/cluster-info.sh"]
+    
+    query = {
+        bin_dir = local.binary_path
+        log_file = "${local.install_path}/.openshift_install.log"
+        metadata_file = "${local.install_path}/metadata.json"
+        kubeconfig_file = "${local.install_path}/auth/kubeconfig"
+    }
 }
