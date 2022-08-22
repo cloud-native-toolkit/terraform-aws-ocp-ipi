@@ -1,18 +1,16 @@
-module "dev_cluster" {
-  source = "github.com/ibm-garage-cloud/terraform-ibm-container-platform.git"
+resource "random_string" "cluster_id" {
+    length = 5
+    special = false
+    upper = false
+}
 
-  resource_group_name     = var.resource_group_name
-  cluster_name            = var.cluster_name
-  cluster_region          = var.region
-  cluster_type            = substr(var.cluster_type, 0, 3) == "iks" ? "kubernetes" : var.cluster_type
-  cluster_exists          = true
-  ibmcloud_api_key        = var.ibmcloud_api_key
-  name_prefix             = var.name_prefix
-  is_vpc                  = var.vpc_cluster
-  private_vlan_id         = ""
-  public_vlan_id          = ""
-  vlan_datacenter         = ""
-  cluster_machine_type    = ""
-  cluster_worker_count    = 3
-  cluster_hardware        = ""
+module "openshift-cluster" {
+    source = "./module"
+
+    region = var.region
+    access_key = var.access_key
+    secret_key = var.secret_key
+    base_domain_name = var.base_domain_name
+    cluster_name = "${var.name_prefix}-${random_string.cluster_id.result}"
+    pull_secret = var.pull_secret
 }
