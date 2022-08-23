@@ -37,12 +37,32 @@ variable "pull_secret_file" {
     default     = ""
 }
 
-// If using an ssh key for node access, specify the public key for the SSH key pair below
+// If not defined, an SSH key pair will be generated for node access post implementation
 
 variable "public_ssh_key" {
   description = "The SSH Public Key to use for OpenShift Installation"
   type        = string
   default     = ""
+}
+
+// Following are the defaults if creating a new key pair
+
+variable "algorithm" {
+    description = "Algorithim to be utilized if creating a new key (RSA, ECDSA or ED25519, default = RSA)"
+    type        = string
+    default     = "RSA"
+}
+
+variable "rsa_bits" {
+    description = "Number of bits to use for RSA key (default = 4096)"
+    type        = number
+    default     = 4096
+}
+
+variable "ecdsa_curve" {
+    description = "ECDSA Curve value to be utilized for ECDSA key (P224, P256, P521, default = P224)"
+    type        = string
+    default     = "P224"
 }
 
 // Variables below this have default values
