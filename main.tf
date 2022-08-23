@@ -6,6 +6,7 @@ locals {
 
   cluster_type = "openshift"
   cluster_type_code = "ocp4"
+  cluster_version = "${data.external.cluster_info.result.serverVersion}_openshift"
 
   resource_group = var.cluster_name
 
