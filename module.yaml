@@ -29,7 +29,7 @@ versions:
         description: "Name of the cluster"
       - name: config_file_path
         description: "Path to the config file for the cluster"
-      - name: server_url
+      - name: serverURL
         description: "The url used to connect to the api of the cluster"
       - name: username
         description: "Username for the cluster"
