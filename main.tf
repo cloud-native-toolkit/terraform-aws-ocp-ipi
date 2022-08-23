@@ -1,9 +1,16 @@
 locals {
   pull_secret = var.pull_secret_file != "" ? "${chomp(file(var.pull_secret_file))}" : var.pull_secret
+
   install_path = "${path.cwd}/${var.install_offset}"
+  binary_path = "${path.cwd}/${var.binary_offset}"
+
   cluster_type = "openshift"
   cluster_type_code = "ocp4"
+  cluster_version = "${data.external.cluster_info.result.serverVersion}_openshift"
+
   resource_group = var.cluster_name
+
+  key_name = "ocp_access"
 }
 
 resource "local_file" "aws_config" {
@@ -15,10 +22,42 @@ resource "local_file" "aws_config" {
     file_permission = "0600"
 }
 
+resource "tls_private_key" "key" {
+    count     = var.public_ssh_key == "" ? 1 : 0
+
+    algorithm = var.algorithm
+    rsa_bits  = var.algorithm == "RSA" ? var.rsa_bits : null
+    ecdsa_curve = var.algorithm == "ECDSA" ? var.ecdsa_curve : null
+}
+
+resource "local_file" "private_key" {
+    count           = var.public_ssh_key == "" ? 1 : 0
+
+    content         = tls_private_key.key[0].private_key_pem
+    filename        = "${local.install_path}/${local.key_name}"
+    file_permission = "0600"
+}
+
+resource "local_file" "public_key" {
+    count           = var.public_ssh_key == "" ? 1 : 0
+    
+    content         = tls_private_key.key[0].public_key_openssh
+    filename        = "${local.install_path}/${local.key_name}.pub"
+    file_permission = "0644"
+}
+
+data "local_file" "pub_key" {
+    depends_on = [
+      local_file.public_key
+    ]
+
+    filename        = "${local.install_path}/${local.key_name}.pub"
+}
+
 module setup_clis {
     source = "github.com/cloud-native-toolkit/terraform-util-clis.git"
 
-    bin_dir = "${path.cwd}/${var.binary_offset}"
+    bin_dir = local.binary_path
     clis    = ["openshift-install-${var.openshift_version}","jq","yq4","oc"]
 }
 
@@ -54,8 +93,59 @@ resource "local_file" "install_config" {
         PULL_SECRET             = local.pull_secret
         PUBLISH                 = var.private ? "Internal" : "External"
         ENABLE_FIPS             = var.enable_fips
-        PUBLIC_SSH_KEY          = var.public_ssh_key
+        PUBLIC_SSH_KEY          = var.public_ssh_key == "" ? data.local_file.pub_key.content : file(var.public_ssh_key)
     })
     filename        = "${local.install_path}/install-config.yaml"
     file_permission = "0664"
+}
+
+resource "null_resource" "openshift-install" {
+  depends_on = [
+        local_file.aws_config,
+        local_file.install_config,
+        module.setup_clis
+  ]
+
+  triggers = {
+        binary_path = local.binary_path
+        install_path = local.install_path
+  }
+
+  provisioner "local-exec" {
+    when = create
+
+    command = "${path.module}/scripts/install.sh"
+
+    environment = {
+        BINARY_PATH = "${self.triggers.binary_path}"
+        INSTALL_PATH = "${self.triggers.install_path}"
+     }
+  }
+
+  provisioner "local-exec" {
+    when = destroy
+
+    command = "${path.module}/scripts/destroy.sh"
+    
+    environment = {
+        BINARY_PATH = "${self.triggers.binary_path}"
+        INSTALL_PATH = "${self.triggers.install_path}"
+     }
+  }
+}
+
+data external "cluster_info" {
+    depends_on = [
+        null_resource.openshift-install,
+        module.setup_clis
+    ]
+
+    program = ["bash", "${path.module}/scripts/cluster-info.sh"]
+    
+    query = {
+        bin_dir = local.binary_path
+        log_file = "${local.install_path}/.openshift_install.log"
+        metadata_file = "${local.install_path}/metadata.json"
+        kubeconfig_file = "${local.install_path}/auth/kubeconfig"
+    }
 }

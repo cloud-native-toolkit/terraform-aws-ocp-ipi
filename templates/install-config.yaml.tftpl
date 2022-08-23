@@ -7,7 +7,6 @@ controlPlane:
   platform:
     aws:
       type: ${MASTER_NODE_TYPE}
-      region: ${AWS_REGION}
       zones:
         - ${AWS_REGION}a
         - ${AWS_REGION}b
@@ -24,6 +23,10 @@ compute:
         iops: ${WORKER_VOLUME_IOPS}
         size: ${WORKER_VOLUME_SIZE}
         type: ${WORKER_VOLUME_TYPE}
+      zones:
+        - ${AWS_REGION}a
+        - ${AWS_REGION}b
+        - ${AWS_REGION}c
   replicas: ${WORKER_NODE_QTY}
 metadata:
   name: ${CLUSTER_NAME} 
@@ -40,8 +43,7 @@ platform:
   aws:
     region: ${AWS_REGION}
     userTags:
-      - key: Environment
-        value: ${RESOURCE_GROUP}
+      environment: ${RESOURCE_GROUP}
 %{ if EXISTING_VPC == true}
     subnets:
       - ${PRIVATE_SUBNET1}
