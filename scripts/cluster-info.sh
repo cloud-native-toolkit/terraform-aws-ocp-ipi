@@ -36,6 +36,9 @@ SERVER_URL="$(${BIN_DIR}/yq4 eval '.clusters[].cluster.server' ${KUBECONFIG_FILE
 # Set server token to empty as none is set at this stage of the build
 SERVER_TOKEN=""
 
+# Obtain the base domain from kubeconfig
+CLUSTER_DOMAIN="$(${BIN_DIR}/yq4 eval '.clusters[].cluster.server' ${KUBECONFIG_FILE} | sed 's/https\:\/\/api.//g' | sed 's/\:6443//g')"
+
 ${BIN_DIR}/jq --null-input \
     --arg consoleurl "${CONSOLEURL}" \
     --arg user "${USER}" \
@@ -45,4 +48,5 @@ ${BIN_DIR}/jq --null-input \
     --arg server_version "${SERVER_VERSION}" \
     --arg serverurl "${SERVER_URL}" \
     --arg server_token "${SERVER_TOKEN}" \
-    '{"consoleURL": $consoleurl, "kubeadminUsername": $user, "kubeadminPassword": $pwd, "clusterID": $clusterid, "infraID": $infraid, "serverVersion": $server_version, "serverURL": $serverurl, "serverToken": $server_token}'
+    --arg cluster_domain "${CLUSTER_DOMAIN}" \
+    '{"consoleURL": $consoleurl, "kubeadminUsername": $user, "kubeadminPassword": $pwd, "clusterID": $clusterid, "infraID": $infraid, "serverVersion": $server_version, "serverURL": $serverurl, "serverToken": $server_token, "clusterDomain": $cluster_domain }'

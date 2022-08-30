@@ -149,3 +149,39 @@ data external "cluster_info" {
         kubeconfig_file = "${local.install_path}/auth/kubeconfig"
     }
 }
+
+module "acme-cert-apps" {
+    source = "github.com/cloud-native-toolkit/terraform-aws-acme-certificate?ref=v1.0.1"
+
+    domain                  = "apps.${data.external.cluster_info.result.clusterDomain}"
+    wildcard_domain         = true
+    acme_registration_email = var.acme_registration_email
+    aws_access_key          = var.access_key
+    aws_secret_key          = var.secret_key
+    testing                 = var.use_staging_certs ? true : false
+    create_certificate      = var.byo_certs ? false : true
+}
+
+module "acme-cert-api" {
+    source = "github.com/cloud-native-toolkit/terraform-aws-acme-certificate?ref=v1.0.1"
+
+    domain                  = "api.${data.external.cluster_info.result.clusterDomain}"
+    acme_registration_email = var.acme_registration_email
+    aws_access_key          = var.access_key
+    aws_secret_key          = var.secret_key
+    testing                 = var.use_staging_certs ? true : false
+    create_certificate      = var.byo_certs ? false : true
+}
+
+module "api-certs" {
+    source = "github.com/cloud-native-toolkit/terraform-any-ocp-ipi-certs?ref=v1.0.2"
+
+    apps_cert         = var.byo_certs ? file(var.apps-cert-file) : module.acme-cert-apps.cert
+    apps_key          = var.byo_certs ? file(var.apps-key-file)  : module.acme-cert-apps.key
+    apps_issuer_ca    = var.byo_certs ? file(var.apps-ca-file)   : module.acme-cert-apps.issuer_ca
+    api_cert          = var.byo_certs ? file(var.api-cert-file)  : module.acme-cert-api.cert
+    api_key           = var.byo_certs ? file(var.api-key-file)   : module.acme-cert-api.key
+    api_issuer_ca     = var.byo_certs ? file(var.api-ca-file)    : module.acme-cert-api.issuer_ca
+    bin_dir           = local.binary_path
+    config_file_path  = "${local.install_path}/auth/kubeconfig"    
+}

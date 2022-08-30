@@ -32,11 +32,11 @@ Will be supported in a future release
 This module has the following input variables:
 | Variable | Mandatory / Optional | Default Value | Description |
 | -------------------------------- | --------------| ------------------ | ----------------------------------------------------------------------------- |
-| cluster_name | Mandatory | "" | The name to give the OpenShift cluster  |
-| base_domain_name | Mandatory | "" | The existing Route 53 wildcard base domain name that has been defined. For example, clusters.mydomain.com. |
-| region | Mandatory | "" | AWS region into which to deploy the OpenShift cluster |
-| access_key | Mandatory | "" | The AWS account access key |
-| secret_key | Mandatory | "" | The AWS account secret key |
+| cluster_name | Mandatory |  | The name to give the OpenShift cluster  |
+| base_domain_name | Mandatory |  | The existing Route 53 wildcard base domain name that has been defined. For example, clusters.mydomain.com. |
+| region | Mandatory |  | AWS region into which to deploy the OpenShift cluster |
+| access_key | Mandatory |  | The AWS account access key |
+| secret_key | Mandatory |  | The AWS account secret key |
 | pull_secret | Mandatory | "" | The Red Hat pull secret to access the Red Hat image repositories to install OpenShift. One of pull_secret or pull_secret_file is required. |
 | pull_secret_file | Mandatory | "" | The full path and name of the file containing the Red Hat pull secret to access the Red Hat image repositories for the OpenShift installation. One of pull_secret or pull_secret_file is required. |
 | public_ssh_key | Optional | "" | An existing public key to be used for post implementation node (EC2 Instance) access. If left as default, a new key pair will be generated. |
@@ -44,6 +44,16 @@ This module has the following input variables:
 | rsa_bits | Optional | 4096 | The number of bits for the RSA key if creating a new RSA key |
 | ecdsa_curve | Optional | P224 | The ECDSA curve value to be utilized if creating a new ECDSA key |
 | private | Optional | false | (Not currently utilized) Flag to indicate whether cluster is in a private VPC |
+| update_ingress_cert | Optional | true | Flag to indicate whether to update the ingress certificates after the cluster has been created |
+| byo_certs | Optional | false | Flag to indicate whether to use BYO ingress certificates or create new ones |
+| acme_registration_email | Optional | me@mydomain.com | Valid email address for certificate registration |
+| use_staging_certs | Optional | false | Flag to indicate whether to generate staging or valid certificates. Used for testing. Note quota limits on valid certificates. |
+| apps-cert-file | Optional | "" | If using BYO certificates, the full path to the file containing the apps (*.apps.cluster.domain) certificate |
+| apps-key-file | Optional | "" | If using BYO certificates, the full path to the file containing the apps (*.apps.cluster.domain) private key |
+| apps-ca-file | Optional | "" | If using BYO certificates, the full path to the file containing the apps (*.apps.cluster.domain) certificate authority bundle |
+| api-cert-file | Optional | "" | If using BYO certificates, the full path to the file containing the api (*.api.cluster.domain) certificate |
+| api-key-file | Optional | "" | If using BYO certificates, the full path to the file containing the api (*.api.cluster.domain) private key |
+| api-ca-file | Optional | "" | If using BYO certificates, the full path to the file containing the api (*.api.cluster.domain) certificate authority bundle |
 | binary_offset | Optional | binaries | The path offset from the terraform root directory into which the binaries will be stored. |
 | install_offset | Optional | install | The path offset from the terraform root directory into which the OpenShift installation files will be stored. |
 | openshift_version | Optional | 4.10.11 | The version of OpenShift to be installed (must be available in the mirror repository - see below) |
@@ -93,12 +103,13 @@ provider "aws" {
 module "openshift-cluster" {
     source = "github.com/cloud-native-toolkit/terraform-aws-ocp-ipi"
 
-    region = var.region                       # AWS region to deploy cluster into
-    access_key = var.access_key               # AWS access key
-    secret_key = var.secret_key               # AWS access key secret
-    base_domain_name = var.base_domain_name   # Base domain name registered in AWS (e.g. clusters.mydomain.com)
-    cluster_name = var.cluster_name           # Name of the cluster and environment tag for deployed resources
-    pull_secret_file = var.pull_secret_file   # Path to the file with the Red Hat OpenShift pull secret
+    region = var.region                           # AWS region to deploy cluster into
+    access_key = var.access_key                   # AWS access key
+    secret_key = var.secret_key                   # AWS access key secret
+    base_domain_name = var.base_domain_name       # Base domain name registered in AWS (e.g. clusters.mydomain.com)
+    cluster_name = var.cluster_name               # Name of the cluster and environment tag for deployed resources
+    pull_secret_file = var.pull_secret_file       # Path to the file with the Red Hat OpenShift pull secret
+    acme_email_registration = "me@myexample.com"  # Valid email address for certificate registration
 }
 ```
 
