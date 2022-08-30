@@ -65,10 +65,71 @@ variable "ecdsa_curve" {
     default     = "P224"
 }
 
+// BYO Certificate values if using
+variable "apps-cert-file" {
+    description = "File containing the apps (*.apps.cluster.domain) certificate."
+    type        = string
+    default     = ""
+}
+
+variable "apps-key-file" {
+    description = "File containing the apps (*.apps.cluster.domain) private key."
+    type        = string
+    default     = ""
+}
+
+variable "apps-ca-file" {
+    description = "File containing the apps (*.apps.cluster.domain) certificate authority bundle."
+    type        = string
+    default     = ""
+}
+
+variable "api-cert-file" {
+    description = "File containing the api (api.cluster.domain) certificate."
+    type        = string
+    default     = ""
+}
+
+variable "api-key-file" {
+    description = "File containing the api (api.cluster.domain) private key."
+    type        = string
+    default     = ""
+}
+
+variable "api-ca-file" {
+    description = "File containing the api (api.cluster.domain) certificate authority bundle."
+    type        = string
+    default     = ""
+}
+
 // Variables below this have default values
 
+variable "update_ingress_cert" {
+  description = "Flag to indicate whether to update the ingress certificates after clusetr creation (default = \"true\")"
+  type        = bool
+  default     = true
+}
+
 variable "private" {
-  description = "Flag to indicate whether the cluster is for a private cluster"
+  description = "Flag to indicate whether the cluster is for a private cluster (default = \"false\")"
+  type        = bool
+  default     = false
+}
+
+variable "byo_certs" {
+  description = "Flag to indicate whether to use BYO certificates instead of creating new ones (default = \"false\")"
+  type        = bool
+  default     = false
+}
+
+variable "acme_registration_email" {
+  description = "Valid email for registration of LetsEncrypt certificate. This must be changed if creating ingress certificates."
+  type        = string
+  default     = "me@mydomain.com"
+}
+
+variable "use_staging_certs" {
+  description = "Flag to indicate whether to generate staging or valid certificates. Used for testing. Note quota limits on valid LetsEncrypt certificates. (default = \"false\")"
   type        = bool
   default     = false
 }
